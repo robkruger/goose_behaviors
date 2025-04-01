@@ -2,15 +2,8 @@
 import rospy
 
 from flexbe_core import EventState, Logger
-
-import os
-import rospy
-import cv2
-import numpy as np
-from cv_bridge import CvBridge
-from ultralytics import YOLO
-
-from sensor_msgs.msg import CompressedImage
+from flexbe_core.proxy import ProxyServiceCaller
+from goose_detection.srv import DetectSheets, DetectSheetsRequest
 
 class DetectSheetsState(EventState):
 	'''
@@ -26,27 +19,47 @@ class DetectSheetsState(EventState):
 
 	'''
 
-	def __init__(self):
+	def __init__(self, max_attempts):
 		# Declare outcomes, input_keys, and output_keys by calling the super constructor with the corresponding arguments.
-		super(DetectSheetsState, self).__init__(outcomes = ['found', 'too_close', 'not_found', 'failed'], output_keys =  ['distance', 'x_center'])
-
-        self._status = 'found'
+		super(DetectSheetsState, self).__init__(outcomes=['found', 'too_close', 'not_found', 'failed'], 
+												output_keys=['distance', 'x_center'])
 		
+		# setup the detect_sheet client
+		self._service = "/sheet_detector/detect_sheets"
+		# rospy.wait_for_service(self._service)
+		self._caller = ProxyServiceCaller({self._service: DetectSheets})
+		
+		# set base status
+		self._max_attempts = max_attempts
+		self._attempts = 0
 		
 
+	def on_enter(self, userdata):
+		# This method is called when the state becomes active, i.e. a transition from another state to this one is taken.
+		# It is primarily used to start actions which are associated with this state.
+		Logger.loginfo("Entered detect_sheets_state")
+	
 
 	def execute(self, userdata):
 		# This method is called periodically while the state is active.
 		# Main purpose is to check state conditions and trigger a corresponding outcome.
 		# If no outcome is returned, the state will stay active.
+		if self._attempts < self._max_attempts:
+			try:
+				req = DetectSheetsRequest()
+				distance, x_center = self._caller.call(self._service, req)
+				if distance == x_center == 0.0:
+					Logger.loginfo("not found")
+					return 'not_found'
+				else:
+					Logger.loginfo(f"{distance}, {x_center}")
+					return 'found'
+			
 
-		return 'found'
+			except Exception as e:
+				Logger.logwarn("Unable to send navigation action goal:\n%s" % str(e))
+				return 'failed'
 
-	def on_enter(self, userdata):
-		# This method is called when the state becomes active, i.e. a transition from another state to this one is taken.
-		# It is primarily used to start actions which are associated with this state.
-
-		pass
 
 
 	def on_exit(self, userdata):

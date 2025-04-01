@@ -17,7 +17,7 @@ class GoToHomeState(EventState):
 
     def __init__(self):
         super(GoToHomeState, self).__init__(outcomes=['arrived', 'failed'])
-        # Here, you would set up the SimpleActionState to communicate with move_base
+        # Set up communication with move_base
         self._action_topic = "/move_base"
 
         self._client = ProxyActionClient({self._action_topic: MoveBaseAction})

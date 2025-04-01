@@ -9,6 +9,8 @@
 
 from flexbe_core import Behavior, Autonomy, OperatableStateMachine, ConcurrencyContainer, PriorityContainer, Logger
 from flexbe_states.log_state import LogState
+from goose_flexbe_states.detect_sheets_state import DetectSheetsState
+from goose_flexbe_states.go_to_home_state import GoToHomeState
 # Additional imports can be added inside the following tags
 # [MANUAL_IMPORT]
 
@@ -43,8 +45,11 @@ class GoosestatemachineSM(Behavior):
 
 
 	def create(self):
-		# x:30 y:365, x:130 y:365
+		max_detect_attempts = 10
+		# x:690 y:307, x:130 y:365
 		_state_machine = OperatableStateMachine(outcomes=['finished', 'failed'])
+		_state_machine.userdata.distance = 0.0
+		_state_machine.userdata.x_center = 0.0
 
 		# Additional creation code can be added inside the following tags
 		# [MANUAL_CREATE]
@@ -56,8 +61,21 @@ class GoosestatemachineSM(Behavior):
 			# x:70 y:27
 			OperatableStateMachine.add('Start message',
 										LogState(text="State machine started", severity=Logger.REPORT_HINT),
-										transitions={'done': 'finished'},
+										transitions={'done': 'Detect Sheets'},
 										autonomy={'done': Autonomy.Off})
+
+			# x:249 y:76
+			OperatableStateMachine.add('Go To Home State',
+										GoToHomeState(),
+										transitions={'arrived': 'Detect Sheets', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off})
+
+			# x:457 y:108
+			OperatableStateMachine.add('Detect Sheets',
+										DetectSheetsState(max_attempts=max_detect_attempts),
+										transitions={'found': 'finished', 'too_close': 'failed', 'not_found': 'failed', 'failed': 'failed'},
+										autonomy={'found': Autonomy.Off, 'too_close': Autonomy.Off, 'not_found': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
 
 
 		return _state_machine
