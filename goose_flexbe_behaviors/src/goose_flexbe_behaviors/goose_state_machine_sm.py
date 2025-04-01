@@ -9,6 +9,7 @@
 
 from flexbe_core import Behavior, Autonomy, OperatableStateMachine, ConcurrencyContainer, PriorityContainer, Logger
 from flexbe_states.log_state import LogState
+from goose_flexbe_states.move_arm_state import MoveArmState
 # Additional imports can be added inside the following tags
 # [MANUAL_IMPORT]
 
@@ -53,11 +54,17 @@ class GoosestatemachineSM(Behavior):
 
 
 		with _state_machine:
-			# x:70 y:27
+			# x:128 y:50
 			OperatableStateMachine.add('Start message',
 										LogState(text="State machine started", severity=Logger.REPORT_HINT),
-										transitions={'done': 'finished'},
+										transitions={'done': 'MoveArm'},
 										autonomy={'done': Autonomy.Off})
+
+			# x:293 y:46
+			OperatableStateMachine.add('MoveArm',
+										MoveArmState(joint_positions=[0, 0, 0, 0]),
+										transitions={'arrived': 'finished', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off})
 
 
 		return _state_machine
