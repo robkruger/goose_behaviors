@@ -11,6 +11,7 @@ from flexbe_core import Behavior, Autonomy, OperatableStateMachine, ConcurrencyC
 from flexbe_states.log_state import LogState
 from goose_flexbe_states.detect_sheets_state import DetectSheetsState
 from goose_flexbe_states.go_to_home_state import GoToHomeState
+from goose_flexbe_states.move_to_sheet import MoveToSheet
 # Additional imports can be added inside the following tags
 # [MANUAL_IMPORT]
 
@@ -46,6 +47,8 @@ class GoosestatemachineSM(Behavior):
 
 	def create(self):
 		max_detect_attempts = 10
+		camera_width = 640
+		camera_horizontal_FOV = 58.4
 		# x:690 y:307, x:130 y:365
 		_state_machine = OperatableStateMachine(outcomes=['finished', 'failed'])
 		_state_machine.userdata.distance = 0.0
@@ -58,22 +61,29 @@ class GoosestatemachineSM(Behavior):
 
 
 		with _state_machine:
-			# x:70 y:27
+			# x:128 y:50
 			OperatableStateMachine.add('Start message',
 										LogState(text="State machine started", severity=Logger.REPORT_HINT),
-										transitions={'done': 'Detect Sheets'},
+										transitions={'done': 'Go To Home State'},
 										autonomy={'done': Autonomy.Off})
 
-			# x:249 y:76
+			# x:127 y:161
 			OperatableStateMachine.add('Go To Home State',
 										GoToHomeState(),
 										transitions={'arrived': 'Detect Sheets', 'failed': 'failed'},
 										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off})
 
-			# x:457 y:108
+			# x:609 y:113
+			OperatableStateMachine.add('Move to sheet',
+										MoveToSheet(camera_width=camera_width, camera_horiz_FOV=camera_horizontal_FOV),
+										transitions={'arrived': 'finished', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
+			# x:363 y:98
 			OperatableStateMachine.add('Detect Sheets',
 										DetectSheetsState(max_attempts=max_detect_attempts),
-										transitions={'found': 'finished', 'too_close': 'failed', 'not_found': 'failed', 'failed': 'failed'},
+										transitions={'found': 'Move to sheet', 'too_close': 'failed', 'not_found': 'failed', 'failed': 'failed'},
 										autonomy={'found': Autonomy.Off, 'too_close': Autonomy.Off, 'not_found': Autonomy.Off, 'failed': Autonomy.Off},
 										remapping={'distance': 'distance', 'x_center': 'x_center'})
 

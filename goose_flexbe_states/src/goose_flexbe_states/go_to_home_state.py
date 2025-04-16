@@ -29,11 +29,11 @@ class GoToHomeState(EventState):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"  # Make sure this matches SLAM map frame.
         goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = -1.030534267425537
-        goal.target_pose.pose.position.y = -1.6209702491760254
+        goal.target_pose.pose.position.x = -1.2
+        goal.target_pose.pose.position.y = -2.4
         
-        goal.target_pose.pose.orientation.z = 0.9673755124939971
-        goal.target_pose.pose.orientation.w = 0.2533468330707462
+        goal.target_pose.pose.orientation.z = 0.77
+        goal.target_pose.pose.orientation.w = 0.63
 
         # Send the action goal for execution
         try:
