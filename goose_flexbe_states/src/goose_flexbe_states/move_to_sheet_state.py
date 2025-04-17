@@ -25,7 +25,7 @@ class MoveToSheet(EventState):
     <= failed               Navigation failed.
     '''
 
-    def __init__(self, camera_width, camera_horiz_FOV):
+    def __init__(self, camera_width, camera_horiz_FOV, distance_scaler):
         super(MoveToSheet, self).__init__(outcomes=['arrived', 'failed'],
                                             input_keys=['distance', 'x_center'])
         # Set up communication with move_base
@@ -35,20 +35,21 @@ class MoveToSheet(EventState):
 
         self.width = camera_width
         self.horizontal_FOV = camera_horiz_FOV
+        self.distance_scaler = distance_scaler
 
         self._arrived = False
         self._failed = False
 
     def calculate_relative_movement_goal(self, userdata):
-        # Logger.loginfo(f"Distance: {userdata.distance}, center: {userdata.x_center}")
+        Logger.loginfo(f"Recieved sheet: Distance: {userdata.distance}, center: {userdata.x_center}")
         relative_goal = PoseStamped()
         relative_goal.header.frame_id = "base_link"  
         # relative_goal.header.stamp = rospy.Time.now()
 
         angle = (userdata.x_center - self.width / 2) * self.horizontal_FOV / self.width
         rospy.loginfo(f"Angle: {angle} degrees")
-        relative_goal.pose.position.x = 0.5* math.cos(angle * math.pi / 180) * (userdata.distance / 1000)
-        relative_goal.pose.position.y = 0.5* -math.sin(angle * math.pi / 180) * (userdata.distance / 1000)
+        relative_goal.pose.position.x = self.distance_scaler * math.cos(angle * math.pi / 180) * (userdata.distance / 1000)
+        relative_goal.pose.position.y = self.distance_scaler * -math.sin(angle * math.pi / 180) * (userdata.distance / 1000)
         rospy.loginfo(f"Goal position: {relative_goal.pose.position.x}m, {relative_goal.pose.position.y}m")
         relative_goal.pose.orientation.w = 1.0
         return relative_goal
