@@ -15,7 +15,7 @@ class GoToHomeState(EventState):
     <= failed             Navigation failed.
     '''
 
-    def __init__(self):
+    def __init__(self, home_px, home_py, home_oz, home_ow):
         super(GoToHomeState, self).__init__(outcomes=['arrived', 'failed'])
         # Set up communication with move_base
         self._action_topic = "/move_base"
@@ -25,15 +25,20 @@ class GoToHomeState(EventState):
         self._arrived = False
         self._failed = False
 
+        self._home_px = home_px
+        self._home_py = home_py
+        self._home_oz = home_oz
+        self._home_ow = home_ow
+
     def on_enter(self, userdata):
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"  # Make sure this matches SLAM map frame.
         goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position.x = -1.2
-        goal.target_pose.pose.position.y = -2.4
+        goal.target_pose.pose.position.x = self._home_px
+        goal.target_pose.pose.position.y = self._home_py
         
-        goal.target_pose.pose.orientation.z = 0.77
-        goal.target_pose.pose.orientation.w = 0.63
+        goal.target_pose.pose.orientation.z = self._home_oz
+        goal.target_pose.pose.orientation.w = self._home_ow
 
         # Send the action goal for execution
         try:

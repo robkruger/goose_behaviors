@@ -4,6 +4,7 @@ import rospy
 from flexbe_core import EventState, Logger
 from flexbe_core.proxy import ProxyActionClient
 from goose_detection.msg import DetectSheetsAction, DetectSheetsGoal
+from actionlib_msgs.msg import GoalStatus
 
 class DetectSheetsState(EventState):
 	'''
@@ -52,15 +53,18 @@ class DetectSheetsState(EventState):
 		# Main purpose is to check state conditions and trigger a corresponding outcome.
 		# If no outcome is returned, the state will stay active.
 		if self._client.has_result(self._action_topic):
-			result =  self._client.get_result(self._action_topic)
-			userdata.distance = result.distance
-			userdata.x_center = result.bbox_x_center
-			return 'found'
-		else:
-			if self._attempts >= self._max_attempts:
-				Logger.logwarn(f"DetectSheetsState: No sheets found within {self._max_attempts} attempts.")
-				return 'not_found'
-			self._attempts += 1
+			status = self._client.get_state(self._action_topic)
+			if status == GoalStatus.SUCCEEDED:
+				result =  self._client.get_result(self._action_topic)
+				userdata.distance = result.distance
+				userdata.x_center = result.bbox_x_center
+				return 'found'
+			else:
+				# Logger.logwarn(f"DetectSheetsState: Detect sheets action aborted.")
+				if self._attempts >= self._max_attempts:
+					Logger.logwarn(f"DetectSheetsState: No sheets found within {self._max_attempts} attempts.")
+					return 'not_found'
+				self._attempts += 1
 		# Keep waiting until a result is received.
 		return None
 
