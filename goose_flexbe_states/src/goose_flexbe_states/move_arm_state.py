@@ -7,6 +7,7 @@ import sys
 import actionlib
 from math import pi
 from goose_arm.msg import MoveArmAction, MoveArmGoal
+from mirte_msgs.srv import SetServoAngle
 
 
 class MoveArmState(EventState):
@@ -14,6 +15,7 @@ class MoveArmState(EventState):
     State that calls the arm service to move to a given position.
 
     -- joint_positions 	float64[] 	Four joint positions that the arm should move to.
+    -- gripper_state    int         0: open, 1: close, 2: keep current state
 
     <= arrived 			    Arm is at position.
     <= failed 				Something went wrong.
@@ -26,12 +28,17 @@ class MoveArmState(EventState):
     def result_cb(self, state, result):
         self.result = result
 
-    def __init__(self, joint_positions):
+    def __init__(self, joint_positions, gripper_state):
         # Declare outcomes, input_keys, and output_keys by calling the super constructor with the corresponding arguments.
         super(MoveArmState, self).__init__(outcomes = ['arrived', 'failed'])
         
         self.client = actionlib.SimpleActionClient("/arm/move_arm_action", MoveArmAction)
         self.client.wait_for_server()
+
+        # Subscribe to a ROS service
+        rospy.wait_for_service('/mirte/set_servoGripper_servo_angle')
+        self.move_arm_service = rospy.ServiceProxy('/mirte/set_servoGripper_servo_angle', SetServoAngle)
+        self.gripper_state = gripper_state
 
         self.goal = MoveArmGoal()
         self.goal.joint_positions = joint_positions
@@ -47,11 +54,27 @@ class MoveArmState(EventState):
         state = self.client.get_state()
         if state == 3:
             if self.result.success == True:
+                self.move_gripper()
                 return 'arrived'
             else: 
                 return 'failed'
 
         rospy.sleep(0.2)
+
+    
+    def move_gripper(self):
+        # Call the service to move the gripper
+        try:
+            if self.gripper_state == 0:
+                self.move_arm_service(0.76)
+            elif self.gripper_state == 1:
+                self.move_arm_service(-0.64)
+            elif self.gripper_state == 2:
+                pass
+            else:
+                rospy.logerr("Invalid gripper state")
+        except rospy.ServiceException as e:
+            rospy.logerr("Service call failed: %s" % e)
         
 
     def on_enter(self, userdata):
