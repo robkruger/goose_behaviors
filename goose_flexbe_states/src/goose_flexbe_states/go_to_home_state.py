@@ -22,8 +22,6 @@ class GoToHomeState(EventState):
 
         self._client = ProxyActionClient({self._action_topic: MoveBaseAction})
 
-        self._arrived = False
-        self._failed = False
 
         self._home_px = home_px
         self._home_py = home_py
@@ -31,6 +29,9 @@ class GoToHomeState(EventState):
         self._home_ow = home_ow
 
     def on_enter(self, userdata):
+        self._arrived = False
+        self._failed = False
+        
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"  # Make sure this matches SLAM map frame.
         goal.target_pose.header.stamp = rospy.Time.now()

@@ -15,7 +15,6 @@ class MoveArmState(EventState):
     State that calls the arm service to move to a given position.
 
     -- joint_positions 	float64[] 	Four joint positions that the arm should move to.
-    -- gripper_state    int         0: open, 1: close, 2: keep current state
 
     <= done 			    Arm is at position.
     <= failed 				Something went wrong.
@@ -54,8 +53,7 @@ class MoveArmState(EventState):
         state = self.client.get_state()
         if state == 3:
             if self.result.success == True:
-                self.move_gripper()
-                return 'arrived'
+                return 'done'
             else: 
                 return 'failed'
 
@@ -87,7 +85,7 @@ class MoveArmState(EventState):
     def on_exit(self, userdata):
         # This method is called when an outcome is returned and another state gets active.
         # It can be used to stop possibly running processes started by on_enter.
-
+        self.move_gripper()
         pass
 
     def on_stop(self):

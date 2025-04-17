@@ -32,14 +32,11 @@ class MoveForward(EventState):
 
         self.topic_name = topic_name
 
-        self.distance = np.inf
         self.speed = speed
         self.stop_distance = stop_distance
 
-        self.outliers = 0
         self.outlier_magnitude = outlier_magnitude
 
-        self.outlier_panic = False
 
 
     def distance_callback(self, msg):
@@ -78,6 +75,9 @@ class MoveForward(EventState):
 
         # The following code is just for illustrating how the behavior logger works.
         # Text logged by the behavior logger is sent to the operator and displayed in the GUI.
+        self.distance = np.inf
+        self.outliers = 0
+        self.outlier_panic = False
 
         self.distance_sub = rospy.Subscriber(f"{self.topic_name}", Float32, self.distance_callback)
 
@@ -87,7 +87,10 @@ class MoveForward(EventState):
         # It can be used to stop possibly running processes started by on_enter.
 
         # Unsubscribe from the topic to clean up resources
-        self.distance_sub.unregister()
+        try:
+            self.distance_sub.unregister()
+        except:
+            pass
 
 
     def on_start(self):
@@ -103,4 +106,7 @@ class MoveForward(EventState):
         # This method is called whenever the behavior stops execution, also if it is cancelled.
         # Use this event to clean up things like claimed resources.
 
-        self.distance_sub.unregister()        
+        try:
+            self.distance_sub.unregister()
+        except:
+            pass        

@@ -37,8 +37,6 @@ class MoveToSheet(EventState):
         self.horizontal_FOV = camera_horiz_FOV
         self.distance_scaler = distance_scaler
 
-        self._arrived = False
-        self._failed = False
 
     def calculate_relative_movement_goal(self, userdata):
         Logger.loginfo(f"Recieved sheet: Distance: {userdata.distance}, center: {userdata.x_center}")
@@ -80,6 +78,8 @@ class MoveToSheet(EventState):
 
 
     def on_enter(self, userdata):
+        self._arrived = False
+        self._failed = False
         goal = MoveBaseGoal()
         goal.target_pose.header.frame_id = "map"  # Make sure this matches SLAM map frame.
         goal.target_pose.header.stamp = rospy.Time.now()
