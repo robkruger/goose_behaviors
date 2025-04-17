@@ -17,7 +17,7 @@ class MoveArmState(EventState):
     -- joint_positions 	float64[] 	Four joint positions that the arm should move to.
     -- gripper_state    int         0: open, 1: close, 2: keep current state
 
-    <= arrived 			    Arm is at position.
+    <= done 			    Arm is at position.
     <= failed 				Something went wrong.
 
     '''
@@ -30,7 +30,7 @@ class MoveArmState(EventState):
 
     def __init__(self, joint_positions, gripper_state):
         # Declare outcomes, input_keys, and output_keys by calling the super constructor with the corresponding arguments.
-        super(MoveArmState, self).__init__(outcomes = ['arrived', 'failed'])
+        super(MoveArmState, self).__init__(outcomes = ['done', 'failed'])
         
         self.client = actionlib.SimpleActionClient("/arm/move_arm_action", MoveArmAction)
         self.client.wait_for_server()

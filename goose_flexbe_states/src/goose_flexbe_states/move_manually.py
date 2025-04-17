@@ -28,8 +28,9 @@ class MoveForward(EventState):
         # Declare outcomes, input_keys, and output_keys by calling the super constructor with the corresponding arguments.
         super(MoveForward, self).__init__(outcomes = ['continue', 'failed', 'recovery'])
 
-        self.distance_sub = rospy.Subscriber(f"{topic_name}", Float32, self.distance_callback)
         self.movement_pub = rospy.Publisher('/mobile_base_controller/cmd_vel', Twist, queue_size=2)
+
+        self.topic_name = topic_name
 
         self.distance = np.inf
         self.speed = speed
@@ -42,7 +43,7 @@ class MoveForward(EventState):
 
 
     def distance_callback(self, msg):
-        Logger.loginfo(f"Old distance: {self.distance}, New distance: {msg.data}")
+        # Logger.loginfo(f"Old distance: {self.distance}, New distance: {msg.data}")
         if msg.data < self.distance:
             self.outliers = 0
             self.distance = msg.data  
@@ -78,7 +79,7 @@ class MoveForward(EventState):
         # The following code is just for illustrating how the behavior logger works.
         # Text logged by the behavior logger is sent to the operator and displayed in the GUI.
 
-        pass
+        self.distance_sub = rospy.Subscriber(f"{self.topic_name}", Float32, self.distance_callback)
 
 
     def on_exit(self, userdata):

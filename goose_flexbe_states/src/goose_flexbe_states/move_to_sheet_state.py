@@ -47,10 +47,10 @@ class MoveToSheet(EventState):
         # relative_goal.header.stamp = rospy.Time.now()
 
         angle = (userdata.x_center - self.width / 2) * self.horizontal_FOV / self.width
-        rospy.loginfo(f"Angle: {angle} degrees")
+        Logger.loginfo(f"Angle: {angle} degrees, x: {userdata.x_center}")
         relative_goal.pose.position.x = self.distance_scaler * math.cos(angle * math.pi / 180) * (userdata.distance / 1000)
         relative_goal.pose.position.y = self.distance_scaler * -math.sin(angle * math.pi / 180) * (userdata.distance / 1000)
-        rospy.loginfo(f"Goal position: {relative_goal.pose.position.x}m, {relative_goal.pose.position.y}m")
+        Logger.loginfo(f"Goal position: {relative_goal.pose.position.x}m, {relative_goal.pose.position.y}m")
         relative_goal.pose.orientation.w = 1.0
         return relative_goal
     

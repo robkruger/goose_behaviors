@@ -34,7 +34,6 @@ class DetectSheetsState(EventState):
 		
 		# set base status
 		self._max_attempts = max_attempts
-		self._attempts = 0
 		self._goal_sent = False
 		
 
@@ -42,6 +41,7 @@ class DetectSheetsState(EventState):
 		# This method is called when the state becomes active, i.e. a transition from another state to this one is taken.
 		# It is primarily used to start actions which are associated with this state.
 		Logger.loginfo("Entered detect_sheets_state")
+		self._attempts = 0
 		if not self._goal_sent:
 			goal = DetectSheetsGoal()
 			self._client.send_goal(self._action_topic, goal)
@@ -65,6 +65,8 @@ class DetectSheetsState(EventState):
 					Logger.logwarn(f"DetectSheetsState: No sheets found within {self._max_attempts} attempts.")
 					return 'not_found'
 				self._attempts += 1
+				goal = DetectSheetsGoal()
+				self._client.send_goal(self._action_topic, goal)
 		# Keep waiting until a result is received.
 		return None
 

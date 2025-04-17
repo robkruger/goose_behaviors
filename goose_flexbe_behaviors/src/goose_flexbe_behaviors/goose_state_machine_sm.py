@@ -9,9 +9,12 @@
 
 from flexbe_core import Behavior, Autonomy, OperatableStateMachine, ConcurrencyContainer, PriorityContainer, Logger
 from flexbe_states.log_state import LogState
+from flexbe_states.wait_state import WaitState
 from goose_flexbe_states.RecoveryRotateState import RecoveryRotateState
 from goose_flexbe_states.detect_sheets_state import DetectSheetsState
 from goose_flexbe_states.go_to_home_state import GoToHomeState
+from goose_flexbe_states.move_arm_state import MoveArmState
+from goose_flexbe_states.move_manually import MoveForward
 from goose_flexbe_states.move_to_sheet_state import MoveToSheet
 # Additional imports can be added inside the following tags
 # [MANUAL_IMPORT]
@@ -47,15 +50,16 @@ class GoosestatemachineSM(Behavior):
 
 
 	def create(self):
-		max_detect_attempts = 100
+		max_detect_attempts = 10
 		camera_width = 640
 		camera_horizontal_FOV = 58.4
-		distance_scaler = 0.8
+		distance_scaler = 0.5
 		home_pos_x = -0.94
 		home_pos_y = 2.44
 		home_ori_z = 0.00
 		home_ori_w = 1.00
-		# x:731 y:572, x:193 y:628
+		lidar_front_topic = "/lidar_front_distance"
+		# x:1593 y:715, x:229 y:713
 		_state_machine = OperatableStateMachine(outcomes=['finished', 'failed'])
 		_state_machine.userdata.distance = 0.0
 		_state_machine.userdata.x_center = 0.0
@@ -73,25 +77,83 @@ class GoosestatemachineSM(Behavior):
 										transitions={'done': 'Go To Home State'},
 										autonomy={'done': Autonomy.Off})
 
+			# x:848 y:327
+			OperatableStateMachine.add('Detect confirm',
+										DetectSheetsState(max_attempts=max_detect_attempts),
+										transitions={'found': 'Move to sheet 2', 'too_close': 'failed', 'not_found': 'recover confirm detection', 'failed': 'failed'},
+										autonomy={'found': Autonomy.Off, 'too_close': Autonomy.Off, 'not_found': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
 			# x:292 y:70
 			OperatableStateMachine.add('Go To Home State',
 										GoToHomeState(home_px=home_pos_x, home_py=home_pos_y, home_oz=home_ori_z, home_ow=home_ori_w),
-										transitions={'arrived': 'Detect Sheets', 'failed': 'failed'},
+										transitions={'arrived': 'Wait camera stable', 'failed': 'failed'},
 										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off})
 
-			# x:656 y:256
+			# x:1446 y:605
+			OperatableStateMachine.add('Move arm down',
+										MoveArmState(joint_positions=[0.0, -1.05, -1.40, -0.70]),
+										transitions={'done': 'finished', 'failed': 'failed'},
+										autonomy={'done': Autonomy.Off, 'failed': Autonomy.Off})
+
+			# x:1244 y:522
+			OperatableStateMachine.add('Move manually to sheet',
+										MoveForward(topic_name=lidar_front_topic, speed=0.15, stop_distance=0.25, outlier_magnitude=0.5),
+										transitions={'continue': 'Move arm down', 'failed': 'failed', 'recovery': 'recover manual forward movement'},
+										autonomy={'continue': Autonomy.Off, 'failed': Autonomy.Off, 'recovery': Autonomy.Off})
+
+			# x:642 y:208
 			OperatableStateMachine.add('Move to sheet',
 										MoveToSheet(camera_width=camera_width, camera_horiz_FOV=camera_horizontal_FOV, distance_scaler=distance_scaler),
-										transitions={'arrived': 'finished', 'failed': 'failed'},
+										transitions={'arrived': 'wait camera stable 2', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
+			# x:985 y:393
+			OperatableStateMachine.add('Move to sheet 2',
+										MoveToSheet(camera_width=camera_width, camera_horiz_FOV=camera_horizontal_FOV, distance_scaler=distance_scaler),
+										transitions={'arrived': 'wait lidar stable', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
+			# x:294 y:166
+			OperatableStateMachine.add('Wait camera stable',
+										WaitState(wait_time=5),
+										transitions={'done': 'Detect Sheets'},
+										autonomy={'done': Autonomy.Off})
+
+			# x:854 y:112
+			OperatableStateMachine.add('recover confirm detection',
+										RecoveryRotateState(rnd_mew=0.0, rnd_std=1.0),
+										transitions={'arrived': 'wait camera stable 2', 'failed': 'failed'},
+										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
+										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
+			# x:1203 y:327
+			OperatableStateMachine.add('recover manual forward movement',
+										RecoveryRotateState(rnd_mew=0.0, rnd_std=1.0),
+										transitions={'arrived': 'Move manually to sheet', 'failed': 'failed'},
 										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
 										remapping={'distance': 'distance', 'x_center': 'x_center'})
 
 			# x:495 y:35
 			OperatableStateMachine.add('recovery sheet detection',
-										RecoveryRotateState(rnd_mew=0.0, rnd_std=1.0),
-										transitions={'arrived': 'Detect Sheets', 'failed': 'Go To Home State'},
+										RecoveryRotateState(rnd_mew=0.5, rnd_std=1.0),
+										transitions={'arrived': 'Wait camera stable', 'failed': 'Go To Home State'},
 										autonomy={'arrived': Autonomy.Off, 'failed': Autonomy.Off},
 										remapping={'distance': 'distance', 'x_center': 'x_center'})
+
+			# x:698 y:284
+			OperatableStateMachine.add('wait camera stable 2',
+										WaitState(wait_time=5),
+										transitions={'done': 'Detect confirm'},
+										autonomy={'done': Autonomy.Off})
+
+			# x:1146 y:435
+			OperatableStateMachine.add('wait lidar stable',
+										WaitState(wait_time=3),
+										transitions={'done': 'Move manually to sheet'},
+										autonomy={'done': Autonomy.Off})
 
 			# x:453 y:177
 			OperatableStateMachine.add('Detect Sheets',
